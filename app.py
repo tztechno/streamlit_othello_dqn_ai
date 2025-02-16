@@ -20,6 +20,35 @@ if 'human_color' not in st.session_state:
 if 'game_over' not in st.session_state:
     st.session_state.game_over = False
 
+
+class StreamlitOthelloAI(OthelloAI):
+    def load_model_from_drive(self, drive_url):
+        """Download and load model from Google Drive"""
+        try:
+            # Create models directory if it doesn't exist
+            Path('models').mkdir(exist_ok=True)
+            
+            # Extract file ID from Google Drive URL
+            file_id = drive_url.split('/')[5]
+            
+            # Construct direct download URL
+            direct_url = f'https://drive.google.com/uc?id={file_id}'
+            
+            # Local path to save the model
+            local_path = 'models/othello_model.pth'
+            
+            # Download the file if it doesn't exist
+            if not os.path.exists(local_path):
+                gdown.download(direct_url, local_path, quiet=False)
+            
+            # Load the model using existing load_model method
+            self.load_model(local_path)
+            return True
+            
+        except Exception as e:
+            print(f"Error loading model from drive: {str(e)}")
+            return False
+
 def reset_game():
     st.session_state.game = OthelloGame()
     st.session_state.game_over = False
