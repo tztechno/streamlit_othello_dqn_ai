@@ -1,5 +1,5 @@
 
-# alert
+# error
 
 Using untrained model - AI performance may be limited
 
