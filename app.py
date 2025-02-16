@@ -150,6 +150,8 @@ class DQN_Agent:
                          for move in valid_moves]
         return max(valid_q_values, key=lambda x: x[1])[0]
 
+
+
 class OthelloAI:
     def __init__(self):
         self.game = OthelloGame()
@@ -157,8 +159,8 @@ class OthelloAI:
         self.trained = False
     
     def load_model(self, model_path):
-        if model_path.startswith("http://") or model_path.startswith("https://"):
-            try:
+        try:
+            if model_path.startswith("http://") or model_path.startswith("https://"):
                 response = requests.get(model_path, stream=True)
                 response.raise_for_status()
                 
@@ -166,32 +168,43 @@ class OthelloAI:
                 for chunk in response.iter_content(chunk_size=8192):
                     model_bytes.write(chunk)
                 model_bytes.seek(0)
-        
-                checkpoint = None  # 事前に初期化
                 
                 # Experience クラスを安全なグローバルとして追加
                 with torch.serialization.safe_globals([Experience]):
-                    checkpoint = torch.load(model_bytes, map_location=self.ai.device, weights_only=True)
-        
-                if checkpoint is not None:
-                    self.ai.model.load_state_dict(checkpoint)
-                    print("Model loaded successfully!")
-                else:
-                    print("Warning: Model checkpoint is None.")
-            except Exception as e:
-                print(f"Error loading model: {e}")
-                checkpoint = None  # エラー発生時も明示的に None にする
-        else:
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"No model file found at {model_path}")
-            checkpoint = torch.load(model_path, map_location=self.ai.device)
-        
-        self.ai.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
-        self.ai.target_net.load_state_dict(checkpoint['target_net_state_dict'])
-        self.ai.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.ai.epsilon = checkpoint['epsilon']
-        self.ai.memory = deque(checkpoint['memory'], maxlen=10000)
-        self.trained = True
+                    checkpoint = torch.load(model_bytes, map_location=self.ai.device)
+            else:
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"No model file found at {model_path}")
+                checkpoint = torch.load(model_path, map_location=self.ai.device)
+
+            # checkpoint が None でないことを確認
+            if checkpoint is None:
+                raise ValueError("Loaded checkpoint is None")
+
+            # 必要なキーが存在することを確認
+            required_keys = ['policy_net_state_dict', 'target_net_state_dict', 
+                           'optimizer_state_dict', 'epsilon', 'memory']
+            for key in required_keys:
+                if key not in checkpoint:
+                    raise KeyError(f"Missing required key in checkpoint: {key}")
+
+            # モデルの状態を読み込む
+            self.ai.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+            self.ai.target_net.load_state_dict(checkpoint['target_net_state_dict'])
+            self.ai.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.ai.epsilon = checkpoint['epsilon']
+            self.ai.memory = deque(checkpoint['memory'], maxlen=10000)
+            self.trained = True
+            
+            print("Model loaded successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            self.trained = False
+            return False
+
+
 
 # Initialize session state
 if 'game' not in st.session_state:
