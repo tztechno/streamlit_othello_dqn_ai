@@ -4,6 +4,8 @@ import torch
 from PIL import Image
 import os
 from othello import OthelloGame, OthelloAI, DQN  # Assuming othello.py contains your game classes
+import gdown
+
 
 # Initialize session state
 if 'game' not in st.session_state:
@@ -135,6 +137,49 @@ def main():
     black_count = np.sum(st.session_state.game.board == 1)
     white_count = np.sum(st.session_state.game.board == -1)
     st.write(f"Score - Black: {black_count}, White: {white_count}")
+
+
+
+def load_model_from_drive():
+    """Load model from Google Drive if not already cached"""
+    model_path = 'model_cache/othello_model.pth'
+    
+    # Create cache directory if it doesn't exist
+    os.makedirs('model_cache', exist_ok=True)
+    
+    # Check if model is already cached
+    if not os.path.exists(model_path):
+        try:
+            # Get Google Drive file ID from Streamlit secrets
+            file_id = st.secrets["google_drive_model_id"]
+            
+            # Download file from Google Drive
+            url = f'https://drive.google.com/uc?id={file_id}'
+            gdown.download(url, model_path, quiet=False)
+            
+            st.success("Model downloaded successfully!")
+        except Exception as e:
+            st.error(f"Error downloading model: {str(e)}")
+            return None
+    
+    return model_path
+
+# Initialize AI with model loading from cloud
+if 'ai' not in st.session_state:
+    st.session_state.ai = OthelloAI()
+    model_path = load_model_from_drive()
+    if model_path and os.path.exists(model_path):
+        try:
+            st.session_state.ai.load_model(model_path)
+            st.success("AI model loaded successfully!")
+        except Exception as e:
+            st.error(f"Error loading model: {str(e)}")
+            st.warning("AI will play randomly.")
+    else:
+        st.warning("Could not load AI model. AI will play randomly.")
+
+
+
 
 if __name__ == "__main__":
     main()
