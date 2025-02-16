@@ -5,22 +5,7 @@ from PIL import Image
 import os
 from othello import OthelloGame, OthelloAI, DQN  # Assuming othello.py contains your game classes
 
-# Initialize session state
-if 'game' not in st.session_state:
-    st.session_state.game = OthelloGame()
-if 'ai' not in st.session_state:
-    st.session_state.ai = StreamlitOthelloAI()  # Use the extended class
-    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
-    if st.session_state.ai.load_model_from_drive(drive_url):
-        st.success("AI model loaded successfully!")
-    else:
-        st.warning("Could not load AI model. AI will play randomly.")
-if 'human_color' not in st.session_state:
-    st.session_state.human_color = 1  # 1 for black (first), -1 for white (second)
-if 'game_over' not in st.session_state:
-    st.session_state.game_over = False
-
-
+# クラスを最初に定義
 class StreamlitOthelloAI(OthelloAI):
     def load_model_from_drive(self, drive_url):
         """Download and load model from Google Drive"""
@@ -48,6 +33,23 @@ class StreamlitOthelloAI(OthelloAI):
         except Exception as e:
             print(f"Error loading model from drive: {str(e)}")
             return False
+
+
+# その後でセッション状態を初期化
+if 'game' not in st.session_state:
+    st.session_state.game = OthelloGame()
+if 'ai' not in st.session_state:
+    st.session_state.ai = StreamlitOthelloAI()  # Use the extended class
+    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
+    if st.session_state.ai.load_model_from_drive(drive_url):
+        st.success("AI model loaded successfully!")
+    else:
+        st.warning("Could not load AI model. AI will play randomly.")
+if 'human_color' not in st.session_state:
+    st.session_state.human_color = 1  # 1 for black (first), -1 for white (second)
+if 'game_over' not in st.session_state:
+    st.session_state.game_over = False
+
 
 def reset_game():
     st.session_state.game = OthelloGame()
