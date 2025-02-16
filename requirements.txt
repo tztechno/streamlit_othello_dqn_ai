@@ -1,5 +1,4 @@
-streamlit
-pillow
-torch
-numpy
-gdown
+streamlit 
+numpy 
+torch 
+requests
