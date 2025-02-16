@@ -9,6 +9,7 @@ from collections import deque, namedtuple
 import requests
 import os
 import io
+from main import Experience 
 
 # Experience replay memory
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
@@ -165,10 +166,15 @@ class OthelloAI:
                 for chunk in response.iter_content(chunk_size=8192):
                     model_bytes.write(chunk)
                 model_bytes.seek(0)
-                
-                checkpoint = torch.load(model_bytes, map_location=self.ai.device, weights_only=True)
+        
+                # Experience クラスを安全なグローバルとして追加
+                with torch.serialization.safe_globals([Experience]):
+                    checkpoint = torch.load(model_bytes, map_location=self.ai.device, weights_only=True)
+        
+                self.ai.model.load_state_dict(checkpoint)
+                print("Model loaded successfully!")
             except Exception as e:
-                raise Exception(f"Error downloading model: {e}")
+                print(f"Error loading model: {e}")
         else:
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"No model file found at {model_path}")
