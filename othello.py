@@ -543,19 +543,46 @@ def ai_vs_ai(white_ai, black_ai):
     print(f"Winner: {winner}")
 
 
+def load_model_from_drive(self, drive_url):
+    """Download and load model from Google Drive"""
+    try:
+        # Create models directory if it doesn't exist
+        Path('models').mkdir(exist_ok=True)
+        
+        # Extract file ID from Google Drive URL
+        file_id = drive_url.split('/')[5]
+        
+        # Construct direct download URL
+        direct_url = f'https://drive.google.com/uc?id={file_id}'
+        
+        # Local path to save the model
+        local_path = 'models/othello_model.pth'
+        
+        # Download the file if it doesn't exist
+        if not os.path.exists(local_path):
+            gdown.download(direct_url, local_path, quiet=False)
+        
+        # Load the model using existing load_model method
+        self.load_model(local_path)
+        return True
+        
+    except Exception as e:
+        print(f"Error loading model from drive: {str(e)}")
+        return False
 
-# Example usage:
-def train_and_save():
-    game = OthelloAI()
-    # Train the AI
-    game.train(num_episodes=100)
-    # Save the trained model
-    game.save_model()
 
 def load_and_play():
     game = OthelloAI()
-    # Load the trained model
-    game.load_model('/kaggle/input/othello-dqn-vs-human-train-save/models/othello_model.pth')
-    # Play against the trained AI
-    game.play_against_human(human_first=False)
+    # Load the trained model from Google Drive
+    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
+    success = game.load_model_from_drive(drive_url)
+    
+    if success:
+        print("Model loaded successfully!")
+        # Play against the trained AI
+        game.play_against_human(human_first=False)
+    else:
+        print("Failed to load model. AI will play randomly.")
+        game.play_against_human(human_first=False)
+
 
