@@ -150,8 +150,6 @@ class DQN_Agent:
                          for move in valid_moves]
         return max(valid_q_values, key=lambda x: x[1])[0]
 
-
-
 class OthelloAI:
     def __init__(self):
         self.game = OthelloGame()
@@ -169,7 +167,6 @@ class OthelloAI:
                     model_bytes.write(chunk)
                 model_bytes.seek(0)
                 
-                # Experience クラスを安全なグローバルとして追加
                 with torch.serialization.safe_globals([Experience]):
                     checkpoint = torch.load(model_bytes, map_location=self.ai.device)
             else:
@@ -177,18 +174,15 @@ class OthelloAI:
                     raise FileNotFoundError(f"No model file found at {model_path}")
                 checkpoint = torch.load(model_path, map_location=self.ai.device)
 
-            # checkpoint が None でないことを確認
             if checkpoint is None:
                 raise ValueError("Loaded checkpoint is None")
 
-            # 必要なキーが存在することを確認
             required_keys = ['policy_net_state_dict', 'target_net_state_dict', 
                            'optimizer_state_dict', 'epsilon', 'memory']
             for key in required_keys:
                 if key not in checkpoint:
                     raise KeyError(f"Missing required key in checkpoint: {key}")
 
-            # モデルの状態を読み込む
             self.ai.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
             self.ai.target_net.load_state_dict(checkpoint['target_net_state_dict'])
             self.ai.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -196,7 +190,6 @@ class OthelloAI:
             self.ai.memory = deque(checkpoint['memory'], maxlen=10000)
             self.trained = True
             
-            print("Model loaded successfully!")
             return True
             
         except Exception as e:
@@ -204,8 +197,10 @@ class OthelloAI:
             self.trained = False
             return False
 
+# Streamlit UI setup
+st.set_page_config(layout="centered", page_title="Othello vs AI")
 
-# セッション状態の初期化部分
+# Initialize session state
 if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
     st.session_state.ai = OthelloAI()
@@ -223,9 +218,6 @@ if 'game' not in st.session_state:
     except Exception as e:
         st.error(f"Error loading model: {e}")
 
-###start
-
-# 移動を処理する関数を修正
 def handle_move(i, j):
     """Handle a move at position (i, j)"""
     if 'move_made' not in st.session_state:
@@ -253,109 +245,105 @@ def handle_move(i, j):
                     st.session_state.game.make_move(*action)
                     st.session_state.ai_last_move = action
 
-# メインのUI部分
-# ボードの表示前に移動が行われたかチェック
-if 'move_made' in st.session_state and st.session_state.move_made:
-    st.session_state.move_made = False
-
-# Reset game button
-if st.button("Reset Game"):
-    st.session_state.game = OthelloGame()
-    st.session_state.last_move = None
-    st.session_state.ai_last_move = None
-    st.session_state.move_made = False
-    if not human_first:  # If AI goes first
-        valid_moves = st.session_state.game.get_valid_moves()
-        if valid_moves:
-            action = st.session_state.ai.ai.get_action(
-                st.session_state.game.get_state(),
-                valid_moves,
-                training=False
-            )
-            if action:
-                st.session_state.game.make_move(*action)
-                st.session_state.ai_last_move = action
-
-
-# ボードの表示部分（変更なし）
-cols = st.columns([1, 2, 1])
-with cols[1]:
-    board = st.session_state.game.get_state()
-    for i in range(8):
-        cols_board = st.columns(8)
-        for j in range(8):
-            with cols_board[j]:
-                if board[i][j] == 1:
-                    piece = "⚫"
-                elif board[i][j] == -1:
-                    piece = "⚪"
-                else:
-                    piece = "·"
-                
-                st.button(
-                    piece, 
-                    key=f"cell_{i}_{j}", 
-                    on_click=handle_move, 
-                    args=(i, j),
-                    help=f"Position ({i}, {j})",
-                    use_container_width=True
-                )
-                
-###end
-
-
 # Streamlit interface
 st.title("Play Othello Against AI")
 
-# Player selection
-if 'player_color' not in st.session_state:
-    st.session_state.player_color = "Black (First)"
-
-player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"], key="player_color")
-human_first = player_color == "Black (First)"
-
-
-
-# Initialize last move trackers if not exists
-if 'last_move' not in st.session_state:
-    st.session_state.last_move = None
-if 'ai_last_move' not in st.session_state:
-    st.session_state.ai_last_move = None
-
-
-# Game status and information
-col1, col2 = st.columns(2)
-
-with col1:
-    # Score
-    board = st.session_state.game.get_state()
-    black_count = np.sum(board == 1)
-    white_count = np.sum(board == -1)
-    st.write(f"Score - Black: {black_count}, White: {white_count}")
+# Controls container
+with st.container():
+    col1, col2 = st.columns([2, 2])
     
-    # Current player
-    current_player = "Black" if st.session_state.game.current_player == 1 else "White"
-    st.write(f"Current player: {current_player}")
+    with col1:
+        # Player selection
+        if 'player_color' not in st.session_state:
+            st.session_state.player_color = "Black (First)"
+        player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"])
+    
+    with col2:
+        # Reset button
+        if st.button("Reset Game", key="reset_button"):
+            st.session_state.game = OthelloGame()
+            st.session_state.last_move = None
+            st.session_state.ai_last_move = None
+            st.session_state.move_made = False
+            
+            # If AI goes first
+            if player_color == "White (Second)":
+                valid_moves = st.session_state.game.get_valid_moves()
+                if valid_moves:
+                    action = st.session_state.ai.ai.get_action(
+                        st.session_state.game.get_state(),
+                        valid_moves,
+                        training=False
+                    )
+                    if action:
+                        st.session_state.game.make_move(*action)
+                        st.session_state.ai_last_move = action
 
-with col2:
-    # Game status
-    winner = st.session_state.game.get_winner()
-    if winner is not None:
-        if winner == 1:
-            st.success("Black wins!")
-        elif winner == -1:
-            st.success("White wins!")
+# Game board container
+with st.container():
+    # Center the board
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        board = st.session_state.game.get_state()
+        # Create board grid
+        for i in range(8):
+            cols_board = st.columns(8)
+            for j in range(8):
+                with cols_board[j]:
+                    # Determine the piece to display
+                    if board[i][j] == 1:
+                        piece = "⚫"
+                    elif board[i][j] == -1:
+                        piece = "⚪"
+                    else:
+                        piece = "·"
+                    
+                    # Create a button for each cell
+                    st.button(
+                        piece,
+                        key=f"cell_{i}_{j}",
+                        on_click=handle_move,
+                        args=(i, j),
+                        help=f"Position ({i}, {j})",
+                        use_container_width=True
+                    )
+
+# Game info container
+with st.container():
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Score
+        board = st.session_state.game.get_state()
+        black_count = np.sum(board == 1)
+        white_count = np.sum(board == -1)
+        st.write(f"Score - Black: {black_count}, White: {white_count}")
+        
+        # Current player
+        current_player = "Black" if st.session_state.game.current_player == 1 else "White"
+        st.write(f"Current player: {current_player}")
+    
+    with col2:
+        # Game status
+        winner = st.session_state.game.get_winner()
+        if winner is not None:
+            if winner == 1:
+                st.success("Black wins!")
+            elif winner == -1:
+                st.success("White wins!")
+            else:
+                st.info("It's a tie!")
+        
+        # Valid moves
+        valid_moves = st.session_state.game.get_valid_moves()
+        if valid_moves:
+            st.write("Valid moves:", valid_moves)
         else:
-            st.info("It's a tie!")
+            if winner is None:
+                st.write("No valid moves available. Turn passes.")
 
-    # Valid moves
-    valid_moves = st.session_state.game.get_valid_moves()
-    if valid_moves:
-        st.write("Valid moves:", valid_moves)
-    else:
-        if winner is None:
-            st.write("No valid moves available. Turn passes.")
-
-
-
+# Reset move_made flag if needed
+if 'move_made' in st.session_state and st.session_state.move_made:
+    st.session_state.move_made = False
 
