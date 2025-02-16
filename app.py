@@ -198,7 +198,7 @@ class OthelloAI:
             return False
 
 # Streamlit UI setup
-st.set_page_config(layout="centered", page_title="Othello vs AI")
+st.set_page_config(layout="centered", page_title="Othello You vs AI")
 
 # Initialize session state
 if 'game' not in st.session_state:
@@ -253,7 +253,7 @@ def handle_move(i, j):
                     st.session_state.ai_last_move = action
 
 # Streamlit interface
-st.title("Play Othello Against AI")
+st.title("Othello You vs AI")
 
 # Controls container
 with st.container():
