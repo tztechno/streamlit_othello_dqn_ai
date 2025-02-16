@@ -1,6 +1,7 @@
 
-# error
+# alert
 
+Using untrained model - AI performance may be limited
 
 ```
 
