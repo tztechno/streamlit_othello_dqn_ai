@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 import numpy as np
 import torch
@@ -156,7 +157,6 @@ class OthelloAI:
         self.trained = False
     
     def load_model(self, model_path):
-        
         if model_path.startswith("http://") or model_path.startswith("https://"):
             try:
                 response = requests.get(model_path, stream=True)
@@ -173,19 +173,14 @@ class OthelloAI:
                 with torch.serialization.safe_globals([Experience]):
                     checkpoint = torch.load(model_bytes, map_location=self.ai.device, weights_only=True)
         
-                # ここで checkpoint の中身を確認
-                print("Checkpoint type:", type(checkpoint))
-                print("Checkpoint keys:", checkpoint.keys() if isinstance(checkpoint, dict) else "Not a dict")
-        
-                if checkpoint is not None and isinstance(checkpoint, dict):
+                if checkpoint is not None:
                     self.ai.model.load_state_dict(checkpoint)
                     print("Model loaded successfully!")
                 else:
-                    print("Warning: Model checkpoint is invalid or None.")
+                    print("Warning: Model checkpoint is None.")
             except Exception as e:
                 print(f"Error loading model: {e}")
                 checkpoint = None  # エラー発生時も明示的に None にする
-                
         else:
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"No model file found at {model_path}")
@@ -325,5 +320,7 @@ with col2:
     else:
         if winner is None:
             st.write("No valid moves available. Turn passes.")
+
+
 
 
