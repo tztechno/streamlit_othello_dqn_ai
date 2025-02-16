@@ -166,14 +166,20 @@ class OthelloAI:
                     model_bytes.write(chunk)
                 model_bytes.seek(0)
         
+                checkpoint = None  # 事前に初期化
+                
                 # Experience クラスを安全なグローバルとして追加
                 with torch.serialization.safe_globals([Experience]):
                     checkpoint = torch.load(model_bytes, map_location=self.ai.device, weights_only=True)
         
-                self.ai.model.load_state_dict(checkpoint)
-                print("Model loaded successfully!")
+                if checkpoint is not None:
+                    self.ai.model.load_state_dict(checkpoint)
+                    print("Model loaded successfully!")
+                else:
+                    print("Warning: Model checkpoint is None.")
             except Exception as e:
                 print(f"Error loading model: {e}")
+                checkpoint = None  # エラー発生時も明示的に None にする
         else:
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"No model file found at {model_path}")
