@@ -186,7 +186,7 @@ if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
     st.session_state.ai = OthelloAI()
     try:
-        st.session_state.ai.load_model("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth")
+        st.session_state.ai.load_model("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth",weights_only=False)
         st.success("AI model loaded successfully!")
     except Exception as e:
         st.error(f"Error loading model: {e}")
