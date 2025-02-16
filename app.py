@@ -205,18 +205,25 @@ if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
     st.session_state.ai = OthelloAI()
     try:
-        # ローカルにモデルファイルを保存
-        response = requests.get("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth")
-        with open("local_model.pth", "wb") as f:
-            f.write(response.content)
+        # モデルファイルを読み込む
+        checkpoint = torch.load("local_model.pth", map_location='cpu')
         
-        # ローカルファイルからロード
-        if st.session_state.ai.load_model("local_model.pth"):
-            st.success("AI model loaded successfully!")
-        else:
-            st.warning("Using untrained model - AI performance may be limited")
+        print("=== Model Debug Information ===")
+        print(f"Keys in checkpoint: {checkpoint.keys()}")
+        
+        if 'policy_net_state_dict' in checkpoint:
+            print("\nPolicy Network Structure:")
+            for key, value in checkpoint['policy_net_state_dict'].items():
+                print(f"{key}: {value.shape}")
+                
+        if 'epsilon' in checkpoint:
+            print(f"\nEpsilon value: {checkpoint['epsilon']}")
+            
+        if 'memory' in checkpoint:
+            print(f"\nReplay memory size: {len(checkpoint['memory'])}")
+            
     except Exception as e:
-        st.error(f"Error loading model: {e}")
+        print(f"Error analyzing model: {e}")
 
 def handle_move(i, j):
     """Handle a move at position (i, j)"""
