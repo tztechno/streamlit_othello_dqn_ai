@@ -9,7 +9,6 @@ from collections import deque, namedtuple
 import requests
 import os
 import io
-from main import Experience 
 
 # Experience replay memory
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
