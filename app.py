@@ -1,172 +1,104 @@
 import streamlit as st
 import numpy as np
-import torch
-from PIL import Image
-import os
-from othello import OthelloGame, OthelloAI, DQN  # Assuming othello.py contains your game classes
+from othello_ai import OthelloAI, OthelloGame
 
-# クラスを最初に定義
-class StreamlitOthelloAI(OthelloAI):
-    def load_model_from_drive(self, drive_url):
-        """Download and load model from Google Drive"""
-        try:
-            # Create models directory if it doesn't exist
-            Path('models').mkdir(exist_ok=True)
-            
-            # Extract file ID from Google Drive URL
-            file_id = drive_url.split('/')[5]
-            
-            # Construct direct download URL
-            direct_url = f'https://drive.google.com/uc?id={file_id}'
-            
-            # Local path to save the model
-            local_path = 'models/othello_model.pth'
-            
-            # Download the file if it doesn't exist
-            if not os.path.exists(local_path):
-                gdown.download(direct_url, local_path, quiet=False)
-            
-            # Load the model using existing load_model method
-            self.load_model(local_path)
-            return True
-            
-        except Exception as e:
-            print(f"Error loading model from drive: {str(e)}")
-            return False
-
-
-# その後でセッション状態を初期化
-if 'game' not in st.session_state:
-    st.session_state.game = OthelloGame()
-if 'ai' not in st.session_state:
-    st.session_state.ai = StreamlitOthelloAI()  # Use the extended class
-    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
-    if st.session_state.ai.load_model_from_drive(drive_url):
-        st.success("AI model loaded successfully!")
-    else:
-        st.warning("Could not load AI model. AI will play randomly.")
-if 'human_color' not in st.session_state:
-    st.session_state.human_color = 1  # 1 for black (first), -1 for white (second)
-if 'game_over' not in st.session_state:
-    st.session_state.game_over = False
-
+def init_session_state():
+    if 'game' not in st.session_state:
+        st.session_state.game = OthelloGame()
+    if 'ai' not in st.session_state:
+        st.session_state.ai = OthelloAI()
+        # Load the pre-trained model
+        st.session_state.ai.load_model("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth")
+    if 'board' not in st.session_state:
+        st.session_state.board = st.session_state.game.get_state()
+    if 'game_over' not in st.session_state:
+        st.session_state.game_over = False
 
 def reset_game():
     st.session_state.game = OthelloGame()
+    st.session_state.board = st.session_state.game.get_state()
     st.session_state.game_over = False
-    if st.session_state.human_color == -1:  # If human is second
-        # AI makes first move
-        valid_moves = st.session_state.game.get_valid_moves()
-        if valid_moves:
-            action = st.session_state.ai.get_action(st.session_state.game.get_state(), valid_moves, training=False)
-            if action:
-                st.session_state.game.make_move(*action)
 
-def create_board_image():
-    # Create a grid image with current game state
-    cell_size = 60
-    board_size = 8
-    image = Image.new('RGB', (cell_size * board_size, cell_size * board_size), 'darkgreen')
-    
-    # Draw grid lines
-    from PIL import ImageDraw
-    draw = ImageDraw.Draw(image)
-    
-    # Draw lines
-    for i in range(board_size + 1):
-        draw.line([(i * cell_size, 0), (i * cell_size, cell_size * board_size)], fill='black', width=2)
-        draw.line([(0, i * cell_size), (cell_size * board_size, i * cell_size)], fill='black', width=2)
-    
-    # Draw pieces
-    for i in range(board_size):
-        for j in range(board_size):
-            if st.session_state.game.board[i, j] != 0:
-                x = j * cell_size + cell_size // 2
-                y = i * cell_size + cell_size // 2
-                color = 'black' if st.session_state.game.board[i, j] == 1 else 'white'
-                draw.ellipse([(x - 25, y - 25), (x + 25, y + 25)], fill=color)
-    
-    return image
-
-def handle_click(i, j):
-    if st.session_state.game_over:
-        return
-    
-    if st.session_state.game.current_player != st.session_state.human_color:
-        st.warning("Not your turn!")
-        return
-    
-    if not st.session_state.game.is_valid_move(i, j):
-        st.warning("Invalid move!")
-        return
-    
-    # Make human move
-    st.session_state.game.make_move(i, j)
-    
-    # Check if game is over
-    if not st.session_state.game.get_valid_moves():
-        st.session_state.game_over = True
-        return
-    
-    # AI's turn
-    valid_moves = st.session_state.game.get_valid_moves()
-    if valid_moves:
-        action = st.session_state.ai.get_action(st.session_state.game.get_state(), valid_moves, training=False)
-        if action:
-            st.session_state.game.make_move(*action)
-    
-    # Check if game is over after AI move
-    if not st.session_state.game.get_valid_moves():
-        st.session_state.game_over = True
+def make_move(row, col):
+    if not st.session_state.game_over:
+        # Human move
+        if st.session_state.game.make_move(row, col):
+            st.session_state.board = st.session_state.game.get_state()
+            
+            # Check if game is over after human move
+            if not st.session_state.game.get_valid_moves():
+                st.session_state.game_over = True
+                return
+            
+            # AI move
+            valid_moves = st.session_state.game.get_valid_moves()
+            if valid_moves:
+                action = st.session_state.ai.get_action(st.session_state.board, valid_moves, training=False)
+                if action:
+                    st.session_state.game.make_move(*action)
+                    st.session_state.board = st.session_state.game.get_state()
+            
+            # Check if game is over after AI move
+            if not st.session_state.game.get_valid_moves():
+                st.session_state.game_over = True
 
 def main():
-    st.title("Othello vs AI")
+    st.title("Othello Game")
+    st.write("Play against AI (You are Black, AI is White)")
     
-    # Color selection
-    col1, col2 = st.columns([2, 2])
+    init_session_state()
+    
+    # Reset button
+    if st.button("New Game"):
+        reset_game()
+    
+    # Create the game board display
+    col1, col2 = st.columns([3, 1])
+    
     with col1:
-        color = st.radio("Choose your color:", ["Black (First)", "White (Second)"], 
-                        index=0 if st.session_state.human_color == 1 else 1,
-                        on_change=reset_game)
-        st.session_state.human_color = 1 if color == "Black (First)" else -1
+        # Display the board as a grid of buttons
+        for i in range(8):
+            cols = st.columns(8)
+            for j in range(8):
+                with cols[j]:
+                    piece = st.session_state.board[i][j]
+                    if piece == 1:  # Black
+                        button_label = "⚫"
+                    elif piece == -1:  # White
+                        button_label = "⚪"
+                    else:
+                        button_label = " "
+                    
+                    # Make the button disabled if the position is already occupied
+                    if piece != 0:
+                        st.button(button_label, key=f"btn_{i}_{j}", disabled=True)
+                    else:
+                        # Only enable valid moves
+                        is_valid = st.session_state.game.is_valid_move(i, j)
+                        if st.button(button_label, key=f"btn_{i}_{j}", disabled=not is_valid):
+                            make_move(i, j)
     
     with col2:
-        if st.button("New Game"):
-            reset_game()
-    
-    # Display current player
-    current_player = "Your" if st.session_state.game.current_player == st.session_state.human_color else "AI's"
-    st.write(f"{current_player} turn")
-    
-    # Create and display the board
-    board_image = create_board_image()
-    
-    # Create clickable grid
-    clicked = st.image(board_image, use_column_width=True)
-    
-    # Handle clicks using the new query_params API
-    if clicked:
-        params = st.query_params
-        if 'click' in params:
-            x, y = params['click'][0].split(',')  # Assuming click parameter is formatted as "x,y"
-            cell_size = board_image.width // 8
-            i, j = int(float(y) // cell_size), int(float(x) // cell_size)
-            handle_click(i, j)
-    
-    # Display game status
-    if st.session_state.game_over:
-        winner = st.session_state.game.get_winner()
-        if winner == st.session_state.human_color:
-            st.success("You win!")
-        elif winner == -st.session_state.human_color:
-            st.error("AI wins!")
+        # Display game status
+        black_count = np.sum(st.session_state.board == 1)
+        white_count = np.sum(st.session_state.board == -1)
+        
+        st.write("Score:")
+        st.write(f"Black (You): {black_count}")
+        st.write(f"White (AI): {white_count}")
+        
+        if st.session_state.game_over:
+            winner = st.session_state.game.get_winner()
+            if winner == 1:
+                st.success("You win!")
+            elif winner == -1:
+                st.error("AI wins!")
+            else:
+                st.info("It's a tie!")
         else:
-            st.info("It's a tie!")
-    
-    # Display score
-    black_count = np.sum(st.session_state.game.board == 1)
-    white_count = np.sum(st.session_state.game.board == -1)
-    st.write(f"Score - Black: {black_count}, White: {white_count}")
+            valid_moves = st.session_state.game.get_valid_moves()
+            if valid_moves:
+                st.write("Valid moves:", valid_moves)
 
 if __name__ == "__main__":
     main()
