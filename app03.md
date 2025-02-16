@@ -1,7 +1,7 @@
 
 # error
 
-
+Error loading model: cannot access local variable 'checkpoint' where it is not associated with a value
 
 ```
 
@@ -16,7 +16,6 @@ from collections import deque, namedtuple
 import requests
 import os
 import io
-from main import Experience 
 
 # Experience replay memory
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
@@ -321,8 +320,5 @@ with col2:
     else:
         if winner is None:
             st.write("No valid moves available. Turn passes.")
-
-
-
 
 ```
