@@ -10,12 +10,11 @@ if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
 if 'ai' not in st.session_state:
     st.session_state.ai = OthelloAI()
-    # Load the pre-trained model
-    model_path = 'othello_model.pth'
-    if os.path.exists(model_path):
-        st.session_state.ai.load_model(model_path)
+    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
+    if st.session_state.ai.load_model_from_drive(drive_url):
+        st.success("AI model loaded successfully!")
     else:
-        st.warning("Pre-trained model not found. AI will play randomly.")
+        st.warning("Could not load AI model. AI will play randomly.")
 if 'human_color' not in st.session_state:
     st.session_state.human_color = 1  # 1 for black (first), -1 for white (second)
 if 'game_over' not in st.session_state:
