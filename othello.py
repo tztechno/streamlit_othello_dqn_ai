@@ -235,28 +235,51 @@ class OthelloAI:
         }, os.path.join(save_dir, 'othello_model.pth'))
         
         print(f"Model saved to {os.path.join(save_dir, 'othello_model.pth')}")
-    
+
+    ### new
     def load_model(self, model_path):
-        """Load the trained model and optimizer states"""
+        """Load the trained model and optimizer states, handling both local files and URLs."""
+    
+        if model_path.startswith("http://") or model_path.startswith("https://"):
+            # It's a URL, download it
+            try:
+                response = requests.get(model_path, stream=True)
+                response.raise_for_status()
+    
+                filename = os.path.basename(model_path)
+                filepath = filename  # Saves in the current directory. Change as needed.
+    
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+    
+                model_path = filepath  # Update model_path to the local file path
+    
+            except requests.exceptions.RequestException as e:
+                raise Exception(f"Error downloading model from {model_path}: {e}")
+            except Exception as e:
+                raise Exception(f"Error saving model: {e}")
+    
+        # Now, model_path should be a local file path, whether it was originally a URL or not.
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"No model file found at {model_path}")
-        
-        # Load the saved state
+    
+        # Load the saved state (your existing code)
         checkpoint = torch.load(model_path, map_location=self.ai.device)
-        
-        # Load model parameters
+    
         self.ai.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
         self.ai.target_net.load_state_dict(checkpoint['target_net_state_dict'])
         self.ai.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
-        # Load training state
+    
         self.ai.epsilon = checkpoint['epsilon']
         self.ai.memory = deque(checkpoint['memory'], maxlen=10000)
-        
-        # Set trained flag
+    
         self.trained = True
-        
+    
         print(f"Model loaded from {model_path}")
+
+    
+
     
 ##########
     
@@ -543,46 +566,14 @@ def ai_vs_ai(white_ai, black_ai):
     print(f"Winner: {winner}")
 
 
-def load_model_from_drive(self, drive_url):
-    """Download and load model from Google Drive"""
-    try:
-        # Create models directory if it doesn't exist
-        Path('models').mkdir(exist_ok=True)
-        
-        # Extract file ID from Google Drive URL
-        file_id = drive_url.split('/')[5]
-        
-        # Construct direct download URL
-        direct_url = f'https://drive.google.com/uc?id={file_id}'
-        
-        # Local path to save the model
-        local_path = 'models/othello_model.pth'
-        
-        # Download the file if it doesn't exist
-        if not os.path.exists(local_path):
-            gdown.download(direct_url, local_path, quiet=False)
-        
-        # Load the model using existing load_model method
-        self.load_model(local_path)
-        return True
-        
-    except Exception as e:
-        print(f"Error loading model from drive: {str(e)}")
-        return False
 
+def train_and_save():
+    game = OthelloAI()
+    game.train(num_episodes=100)
+    game.save_model()
 
 def load_and_play():
     game = OthelloAI()
-    # Load the trained model from Google Drive
-    drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
-    success = game.load_model_from_drive(drive_url)
+    game.load_model("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth")   
+    game.play_against_human(human_first=False)
     
-    if success:
-        print("Model loaded successfully!")
-        # Play against the trained AI
-        game.play_against_human(human_first=False)
-    else:
-        print("Failed to load model. AI will play randomly.")
-        game.play_against_human(human_first=False)
-
-
