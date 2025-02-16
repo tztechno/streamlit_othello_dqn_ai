@@ -205,7 +205,7 @@ class OthelloAI:
             return False
 
 
-# Streamlitアプリで以下のように修正
+# セッション状態の初期化部分
 if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
     st.session_state.ai = OthelloAI()
@@ -214,12 +214,23 @@ if 'game' not in st.session_state:
         response = requests.get("https://huggingface.co/stpete2/dqn_othello_20250216/resolve/main/othello_model.pth")
         with open("local_model.pth", "wb") as f:
             f.write(response.content)
+        
+        # ローカルファイルからロード
+        if st.session_state.ai.load_model("local_model.pth"):
+            st.success("AI model loaded successfully!")
+        else:
+            st.warning("Using untrained model - AI performance may be limited")
     except Exception as e:
         st.error(f"Error loading model: {e}")
 
+###start
 
+# 移動を処理する関数を修正
 def handle_move(i, j):
     """Handle a move at position (i, j)"""
+    if 'move_made' not in st.session_state:
+        st.session_state.move_made = False
+        
     current_player = st.session_state.game.current_player
     human_first = st.session_state.player_color == "Black (First)"
     
@@ -228,6 +239,7 @@ def handle_move(i, j):
             # Make human move
             st.session_state.game.make_move(i, j)
             st.session_state.last_move = (i, j)
+            st.session_state.move_made = True
             
             # AI's turn
             valid_moves = st.session_state.game.get_valid_moves()
@@ -240,25 +252,18 @@ def handle_move(i, j):
                 if action:
                     st.session_state.game.make_move(*action)
                     st.session_state.ai_last_move = action
-            
-            # Force rerun to update the board
-            st.rerun()
 
-# Streamlit interface
-st.title("Play Othello Against AI")
-
-# Player selection
-if 'player_color' not in st.session_state:
-    st.session_state.player_color = "Black (First)"
-
-player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"], key="player_color")
-human_first = player_color == "Black (First)"
+# メインのUI部分
+# ボードの表示前に移動が行われたかチェック
+if 'move_made' in st.session_state and st.session_state.move_made:
+    st.session_state.move_made = False
 
 # Reset game button
 if st.button("Reset Game"):
     st.session_state.game = OthelloGame()
     st.session_state.last_move = None
     st.session_state.ai_last_move = None
+    st.session_state.move_made = False
     if not human_first:  # If AI goes first
         valid_moves = st.session_state.game.get_valid_moves()
         if valid_moves:
@@ -271,21 +276,15 @@ if st.button("Reset Game"):
                 st.session_state.game.make_move(*action)
                 st.session_state.ai_last_move = action
 
-# Initialize last move trackers if not exists
-if 'last_move' not in st.session_state:
-    st.session_state.last_move = None
-if 'ai_last_move' not in st.session_state:
-    st.session_state.ai_last_move = None
 
-# Create a compact game board display
-cols = st.columns([1, 2, 1])  # Create three columns for layout
-with cols[1]:  # Use the middle column for the board
+# ボードの表示部分（変更なし）
+cols = st.columns([1, 2, 1])
+with cols[1]:
     board = st.session_state.game.get_state()
     for i in range(8):
         cols_board = st.columns(8)
         for j in range(8):
             with cols_board[j]:
-                # Determine the piece to display and styling
                 if board[i][j] == 1:
                     piece = "⚫"
                 elif board[i][j] == -1:
@@ -293,7 +292,6 @@ with cols[1]:  # Use the middle column for the board
                 else:
                     piece = "·"
                 
-                # Create a button for each cell
                 st.button(
                     piece, 
                     key=f"cell_{i}_{j}", 
@@ -302,6 +300,28 @@ with cols[1]:  # Use the middle column for the board
                     help=f"Position ({i}, {j})",
                     use_container_width=True
                 )
+                
+###end
+
+
+# Streamlit interface
+st.title("Play Othello Against AI")
+
+# Player selection
+if 'player_color' not in st.session_state:
+    st.session_state.player_color = "Black (First)"
+
+player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"], key="player_color")
+human_first = player_color == "Black (First)"
+
+
+
+# Initialize last move trackers if not exists
+if 'last_move' not in st.session_state:
+    st.session_state.last_move = None
+if 'ai_last_move' not in st.session_state:
+    st.session_state.ai_last_move = None
+
 
 # Game status and information
 col1, col2 = st.columns(2)
