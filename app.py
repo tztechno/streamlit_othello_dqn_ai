@@ -9,7 +9,7 @@ from othello import OthelloGame, OthelloAI, DQN  # Assuming othello.py contains 
 if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
 if 'ai' not in st.session_state:
-    st.session_state.ai = OthelloAI()
+    st.session_state.ai = StreamlitOthelloAI()  # Use the extended class
     drive_url = 'https://drive.google.com/file/d/1ZBTJj_MrEXlIORoG9rVXiI6FkZMFwCOD/view?usp=drive_link'
     if st.session_state.ai.load_model_from_drive(drive_url):
         st.success("AI model loaded successfully!")
