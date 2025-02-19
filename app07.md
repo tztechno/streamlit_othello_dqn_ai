@@ -232,29 +232,28 @@ def make_ai_move():
     if 'ai_think_start' not in st.session_state:
         st.session_state.ai_think_start = 0
 
+    current_player = st.session_state.game.current_player
+    is_player_black = st.session_state.player_color == "Black (First)"
+    
+    # Determine if it's the AI's turn
+    is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
+    
     # If AI is thinking, check if enough time has passed
-    if st.session_state.ai_thinking:
+    if st.session_state.ai_thinking and is_ai_turn:
         elapsed_time = time.time() - st.session_state.ai_think_start
-        if elapsed_time < 1.0:  # Wait for 1 second
+        if elapsed_time < 0.5:  # Wait for 0.5 second
             return
         
-        current_player = st.session_state.game.current_player
-        is_player_black = st.session_state.player_color == "Black (First)"
-        
-        # Determine if it's the AI's turn
-        is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
-        
-        if is_ai_turn:
-            valid_moves = st.session_state.game.get_valid_moves()
-            if valid_moves:
-                action = st.session_state.ai.ai.get_action(
-                    st.session_state.game.get_state(),
-                    valid_moves,
-                    training=False
-                )
-                if action:
-                    st.session_state.game.make_move(*action)
-                    st.session_state.ai_last_move = action
+        valid_moves = st.session_state.game.get_valid_moves()
+        if valid_moves:
+            action = st.session_state.ai.ai.get_action(
+                st.session_state.game.get_state(),
+                valid_moves,
+                training=False
+            )
+            if action:
+                st.session_state.game.make_move(*action)
+                st.session_state.ai_last_move = action
         
         # Reset AI thinking state
         st.session_state.ai_thinking = False
@@ -366,7 +365,7 @@ with st.container():
                 st.success("White wins!")
             else:
                 st.info("It's a tie!")
-
+        
         # Valid moves
         valid_moves = st.session_state.game.get_valid_moves()
         if valid_moves:
@@ -378,6 +377,8 @@ with st.container():
 # Make AI move at the end if needed
 if not st.session_state.move_made:
     make_ai_move()
+
+
 
 
 ```
