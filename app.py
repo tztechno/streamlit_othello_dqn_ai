@@ -219,24 +219,14 @@ def handle_move(i, j):
             st.session_state.ai_think_start = time.time()
 
 def make_ai_move():
-    """Make AI move if it's AI's turn"""
-    if 'ai_thinking' not in st.session_state:
-        st.session_state.ai_thinking = False
-    if 'ai_think_start' not in st.session_state:
-        st.session_state.ai_think_start = 0
-
+    """Make AI move immediately if it's AI's turn"""
     current_player = st.session_state.game.current_player
     is_player_black = st.session_state.player_color == "Black (First)"
     
-    # Determine if it's the AI's turn
+    # AIのターンかどうかを判定
     is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
     
-    # If AI is thinking, check if enough time has passed
-    if st.session_state.ai_thinking and is_ai_turn:
-        elapsed_time = time.time() - st.session_state.ai_think_start
-        if elapsed_time < 0.5:  # Wait for 0.5 second
-            return
-        
+    if is_ai_turn:
         valid_moves = st.session_state.game.get_valid_moves()
         if valid_moves:
             action = st.session_state.ai.ai.get_action(
@@ -248,8 +238,7 @@ def make_ai_move():
                 st.session_state.game.make_move(*action)
                 st.session_state.ai_last_move = action
         
-        # Reset AI thinking state
-        st.session_state.ai_thinking = False
+        # AIのターンが終わったことを明示
         st.session_state.move_made = False
 
 def reset_game():
