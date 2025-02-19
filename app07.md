@@ -5,7 +5,6 @@
 
 ```
 
-
 import streamlit as st
 import numpy as np
 import torch
@@ -203,6 +202,62 @@ class OthelloAI:
             self.trained = False
             return False
 
+def handle_move(i, j):
+    """Handle a move at position (i, j)"""
+    if 'move_made' not in st.session_state:
+        st.session_state.move_made = False
+    
+    if not st.session_state.game.is_valid_move(i, j):
+        return
+        
+    # Get current game state
+    current_player = st.session_state.game.current_player  # 1 for black, -1 for white
+    is_player_black = st.session_state.player_color == "Black (First)"
+    
+    # Determine if it's the human's turn
+    is_human_turn = (is_player_black and current_player == 1) or (not is_player_black and current_player == -1)
+    
+    if is_human_turn:
+        # Make human move
+        if st.session_state.game.make_move(i, j):
+            st.session_state.last_move = (i, j)
+            st.session_state.move_made = True
+            
+            # Make AI move immediately after
+            make_ai_move()
+            st.rerun()
+
+def make_ai_move():
+    """Make AI move if it's AI's turn"""
+    current_player = st.session_state.game.current_player
+    is_player_black = st.session_state.player_color == "Black (First)"
+    
+    # Determine if it's the AI's turn
+    is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
+    
+    if is_ai_turn:
+        valid_moves = st.session_state.game.get_valid_moves()
+        if valid_moves:
+            action = st.session_state.ai.ai.get_action(
+                st.session_state.game.get_state(),
+                valid_moves,
+                training=False
+            )
+            if action:
+                st.session_state.game.make_move(*action)
+                st.session_state.ai_last_move = action
+
+def reset_game():
+    """Reset the game state"""
+    st.session_state.game = OthelloGame()
+    st.session_state.last_move = None
+    st.session_state.ai_last_move = None
+    st.session_state.move_made = False
+    
+    # If AI goes first (player is white)
+    if st.session_state.player_color == "White (Second)":
+        make_ai_move()
+
 # Streamlit UI setup
 st.set_page_config(layout="centered", page_title="AI Othello")
 
@@ -210,53 +265,10 @@ st.set_page_config(layout="centered", page_title="AI Othello")
 if 'game' not in st.session_state:
     st.session_state.game = OthelloGame()
     st.session_state.ai = OthelloAI()
-    try:
-        # モデルファイルを読み込む
-        checkpoint = torch.load("local_model.pth", map_location='cpu')
-        
-        print("=== Model Debug Information ===")
-        print(f"Keys in checkpoint: {checkpoint.keys()}")
-        
-        if 'policy_net_state_dict' in checkpoint:
-            print("\nPolicy Network Structure:")
-            for key, value in checkpoint['policy_net_state_dict'].items():
-                print(f"{key}: {value.shape}")
-                
-        if 'epsilon' in checkpoint:
-            print(f"\nEpsilon value: {checkpoint['epsilon']}")
-            
-        if 'memory' in checkpoint:
-            print(f"\nReplay memory size: {len(checkpoint['memory'])}")
-            
-    except Exception as e:
-        print(f"Error analyzing model: {e}")
-
-def handle_move(i, j):
-    """Handle a move at position (i, j)"""
-    if 'move_made' not in st.session_state:
-        st.session_state.move_made = False
-        
-    current_player = st.session_state.game.current_player
-    human_first = st.session_state.player_color == "Black (First)"
-    
-    if (human_first and current_player == 1) or (not human_first and current_player == -1):
-        if st.session_state.game.is_valid_move(i, j):
-            # Make human move
-            st.session_state.game.make_move(i, j)
-            st.session_state.last_move = (i, j)
-            st.session_state.move_made = True
-            
-            # AI's turn
-            valid_moves = st.session_state.game.get_valid_moves()
-            if valid_moves:
-                action = st.session_state.ai.ai.get_action(
-                    st.session_state.game.get_state(),
-                    valid_moves,
-                    training=False
-                )
-                if action:
-                    st.session_state.game.make_move(*action)
-                    st.session_state.ai_last_move = action
+    st.session_state.last_move = None
+    st.session_state.ai_last_move = None
+    st.session_state.move_made = False
+    st.session_state.player_color = "Black (First)"  # Default player color
 
 # Streamlit interface
 st.title("AI Othello")
@@ -267,30 +279,15 @@ with st.container():
     
     with col1:
         # Player selection
-        if 'player_color' not in st.session_state:
-            st.session_state.player_color = "Black (First)"
         player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"])
+        if player_color != st.session_state.player_color:
+            st.session_state.player_color = player_color
+            reset_game()
     
     with col2:
         # Reset button
         if st.button("Reset Game", key="reset_button"):
-            st.session_state.game = OthelloGame()
-            st.session_state.last_move = None
-            st.session_state.ai_last_move = None
-            st.session_state.move_made = False
-            
-            # If AI goes first
-            if player_color == "White (Second)":
-                valid_moves = st.session_state.game.get_valid_moves()
-                if valid_moves:
-                    action = st.session_state.ai.ai.get_action(
-                        st.session_state.game.get_state(),
-                        valid_moves,
-                        training=False
-                    )
-                    if action:
-                        st.session_state.game.make_move(*action)
-                        st.session_state.ai_last_move = action
+            reset_game()
 
 # Game board container
 with st.container():
@@ -356,7 +353,10 @@ with st.container():
             if winner is None:
                 st.write("No valid moves available. Turn passes.")
 
-# Reset move_made flag if needed
-if 'move_made' in st.session_state and st.session_state.move_made:
-    st.session_state.move_made = False
+# Make AI move at the end if needed
+if not st.session_state.move_made:
+    make_ai_move()
+
+
+
 ```
