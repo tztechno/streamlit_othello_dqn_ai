@@ -5,7 +5,7 @@
 
 ```
 
-Complete Othello Game with AI Delay
+
 
 import streamlit as st
 import numpy as np
@@ -375,6 +375,8 @@ with st.container():
             if winner is None:
                 st.write("No valid moves available.
 
-
+# Make AI move at the end if needed
+if not st.session_state.move_made:
+    make_ai_move()
 
 ```
