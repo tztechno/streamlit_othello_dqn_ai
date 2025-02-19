@@ -3,7 +3,7 @@
 
 2025-02-17 01:50
 
-white(second) cannot play???
+serious problem: white(second) cannot play
 
 
 ```
