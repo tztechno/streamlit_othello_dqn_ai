@@ -1,9 +1,7 @@
 
-# no error
+# error
 
 2025-02-17 01:50
-
-successfully completed!
 
 white(second) cannot play???
 
