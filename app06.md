@@ -5,6 +5,8 @@
 
 successfully completed!
 
+white(second) cannot play???
+
 
 ```
 
