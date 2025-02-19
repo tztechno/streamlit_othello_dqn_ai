@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 import numpy as np
 import torch
@@ -9,6 +10,7 @@ from collections import deque, namedtuple
 import requests
 import os
 import io
+import time
 
 # Experience replay memory
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
@@ -173,9 +175,6 @@ class OthelloAI:
                     raise FileNotFoundError(f"No model file found at {model_path}")
                 checkpoint = torch.load(model_path, map_location=self.ai.device)
 
-            if checkpoint is None:
-                raise ValueError("Loaded checkpoint is None")
-
             required_keys = ['policy_net_state_dict', 'target_net_state_dict', 
                            'optimizer_state_dict', 'epsilon', 'memory']
             for key in required_keys:
@@ -216,30 +215,43 @@ def handle_move(i, j):
         if st.session_state.game.make_move(i, j):
             st.session_state.last_move = (i, j)
             st.session_state.move_made = True
-            
-            # Make AI move immediately after
-            make_ai_move()
-            st.rerun()
+            st.session_state.ai_thinking = True
+            st.session_state.ai_think_start = time.time()
 
 def make_ai_move():
     """Make AI move if it's AI's turn"""
-    current_player = st.session_state.game.current_player
-    is_player_black = st.session_state.player_color == "Black (First)"
-    
-    # Determine if it's the AI's turn
-    is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
-    
-    if is_ai_turn:
-        valid_moves = st.session_state.game.get_valid_moves()
-        if valid_moves:
-            action = st.session_state.ai.ai.get_action(
-                st.session_state.game.get_state(),
-                valid_moves,
-                training=False
-            )
-            if action:
-                st.session_state.game.make_move(*action)
-                st.session_state.ai_last_move = action
+    if 'ai_thinking' not in st.session_state:
+        st.session_state.ai_thinking = False
+    if 'ai_think_start' not in st.session_state:
+        st.session_state.ai_think_start = 0
+
+    # If AI is thinking, check if enough time has passed
+    if st.session_state.ai_thinking:
+        elapsed_time = time.time() - st.session_state.ai_think_start
+        if elapsed_time < 1.0:  # Wait for 1 second
+            return
+        
+        current_player = st.session_state.game.current_player
+        is_player_black = st.session_state.player_color == "Black (First)"
+        
+        # Determine if it's the AI's turn
+        is_ai_turn = (is_player_black and current_player == -1) or (not is_player_black and current_player == 1)
+        
+        if is_ai_turn:
+            valid_moves = st.session_state.game.get_valid_moves()
+            if valid_moves:
+                action = st.session_state.ai.ai.get_action(
+                    st.session_state.game.get_state(),
+                    valid_moves,
+                    training=False
+                )
+                if action:
+                    st.session_state.game.make_move(*action)
+                    st.session_state.ai_last_move = action
+        
+        # Reset AI thinking state
+        st.session_state.ai_thinking = False
+        st.session_state.move_made = False
 
 def reset_game():
     """Reset the game state"""
@@ -247,10 +259,13 @@ def reset_game():
     st.session_state.last_move = None
     st.session_state.ai_last_move = None
     st.session_state.move_made = False
+    st.session_state.ai_thinking = False
+    st.session_state.ai_think_start = 0
     
     # If AI goes first (player is white)
     if st.session_state.player_color == "White (Second)":
-        make_ai_move()
+        st.session_state.ai_thinking = True
+        st.session_state.ai_think_start = time.time()
 
 # Streamlit UI setup
 st.set_page_config(layout="centered", page_title="AI Othello")
@@ -262,7 +277,9 @@ if 'game' not in st.session_state:
     st.session_state.last_move = None
     st.session_state.ai_last_move = None
     st.session_state.move_made = False
-    st.session_state.player_color = "Black (First)"  # Default player color
+    st.session_state.player_color = "Black (First)"
+    st.session_state.ai_thinking = False
+    st.session_state.ai_think_start = 0
 
 # Streamlit interface
 st.title("AI Othello")
@@ -329,6 +346,10 @@ with st.container():
         st.write(f"Current player: {current_player}")
     
     with col2:
+        # AI thinking indicator
+        if st.session_state.get('ai_thinking', False):
+            st.write("AI is thinking...")
+        
         # Game status
         winner = st.session_state.game.get_winner()
         if winner is not None:
@@ -345,8 +366,10 @@ with st.container():
             st.write("Valid moves:", valid_moves)
         else:
             if winner is None:
-                st.write("No valid moves available. Turn passes.")
+                st.write("No valid moves available.
 
 # Make AI move at the end if needed
 if not st.session_state.move_made:
     make_ai_move()
+
+
