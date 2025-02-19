@@ -366,7 +366,7 @@ with st.container():
             st.write("Valid moves:", valid_moves)
         else:
             if winner is None:
-                st.write("No valid moves available.
+                st.write("No valid moves available.")
 
 # Make AI move at the end if needed
 if not st.session_state.move_made:
