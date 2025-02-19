@@ -366,17 +366,18 @@ with st.container():
                 st.success("White wins!")
             else:
                 st.info("It's a tie!")
-        
+
         # Valid moves
         valid_moves = st.session_state.game.get_valid_moves()
         if valid_moves:
             st.write("Valid moves:", valid_moves)
         else:
             if winner is None:
-                st.write("No valid moves available.
+                st.write("No valid moves available.")
 
 # Make AI move at the end if needed
 if not st.session_state.move_made:
     make_ai_move()
+
 
 ```
