@@ -1,6 +1,7 @@
 
-# error?
+# error
 
+Human cannot play white turn
 
 
 ```
