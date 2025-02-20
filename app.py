@@ -261,31 +261,44 @@ def make_ai_move():
         if action:
             st.session_state.game.make_move(*action)
             st.session_state.ai_last_move = action
-            
-            # Check if AI needs to move again (in case human has no valid moves)
-            valid_moves = st.session_state.game.get_valid_moves()
-            human_first = st.session_state.player_color == "Black (First)"
-            if valid_moves and (
-                (human_first and st.session_state.game.current_player == -1) or
-                (not human_first and st.session_state.game.current_player == 1)
-            ):
-                make_ai_move()
 
 
 
-# Controls container
+def handle_color_change():
+    """Handle color selection change"""
+    # Reset the game when color is changed
+    st.session_state.game = OthelloGame()
+    st.session_state.last_move = None
+    st.session_state.ai_last_move = None
+    st.session_state.move_made = False
+    
+    # If White (Second) is selected, make AI's first move
+    if st.session_state.player_color == "White (Second)":
+        make_ai_move()
+
+
+# Controls container updated
 with st.container():
     col1, col2 = st.columns([2, 2])
     
     with col1:
-        # Player selection
+        # Player selection with session state handling
         if 'player_color' not in st.session_state:
             st.session_state.player_color = "Black (First)"
-        player_color = st.radio("Choose your color:", ["Black (First)", "White (Second)"])
+        
+        # Color selection with on_change handler
+        player_color = st.radio(
+            "Choose your color:",
+            ["Black (First)", "White (Second)"],
+            key="player_color_radio",
+            on_change=lambda: handle_color_change()
+        )
+        
+        # Update session state
+        st.session_state.player_color = player_color
     
     with col2:
         # Reset button
-        # Update the reset button handling
         if st.button("Reset Game", key="reset_button"):
             st.session_state.game = OthelloGame()
             st.session_state.last_move = None
@@ -296,7 +309,7 @@ with st.container():
             if st.session_state.player_color == "White (Second)":
                 make_ai_move()
 
-        
+
 
 # Game board container
 with st.container():
