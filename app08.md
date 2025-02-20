@@ -1,7 +1,7 @@
 
-#
+#　successful final version
 
-
+Human can play white turn.
 
 ```
 
