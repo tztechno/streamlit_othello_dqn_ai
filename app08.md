@@ -3,6 +3,11 @@
 
 Human can play white turn.
 
+
+By properly coordinating Streamlit's session management mechanism with the detection of changes in the state of radio buttons, the player's color selection is now reliably reflected.
+
+By independently implementing the behavior when selecting a color (handle_color_change function), the AI's first move when choosing the second move is now reliably executed.
+
 ```
 
 import streamlit as st
