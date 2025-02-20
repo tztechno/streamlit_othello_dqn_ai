@@ -224,6 +224,7 @@ if 'game' not in st.session_state:
     except Exception as e:
         print(f"Error analyzing model: {e}")
 
+### updated
 def handle_move(i, j):
     """Handle a move at position (i, j)"""
     if 'move_made' not in st.session_state:
@@ -232,6 +233,7 @@ def handle_move(i, j):
     current_player = st.session_state.game.current_player
     human_first = st.session_state.player_color == "Black (First)"
     
+    # Check if it's human's turn
     if (human_first and current_player == 1) or (not human_first and current_player == -1):
         if st.session_state.game.is_valid_move(i, j):
             # Make human move
@@ -239,20 +241,37 @@ def handle_move(i, j):
             st.session_state.last_move = (i, j)
             st.session_state.move_made = True
             
-            # AI's turn
-            valid_moves = st.session_state.game.get_valid_moves()
-            if valid_moves:
-                action = st.session_state.ai.ai.get_action(
-                    st.session_state.game.get_state(),
-                    valid_moves,
-                    training=False
-                )
-                if action:
-                    st.session_state.game.make_move(*action)
-                    st.session_state.ai_last_move = action
+            # Process AI's turn immediately after human's move
+            make_ai_move()
 
 # Streamlit interface
-st.title("Play Othello Against AI")
+st.title("AI Othello")
+
+
+### newly defined    
+def make_ai_move():
+    """Handle AI's move"""
+    valid_moves = st.session_state.game.get_valid_moves()
+    if valid_moves:
+        action = st.session_state.ai.ai.get_action(
+            st.session_state.game.get_state(),
+            valid_moves,
+            training=False
+        )
+        if action:
+            st.session_state.game.make_move(*action)
+            st.session_state.ai_last_move = action
+            
+            # Check if AI needs to move again (in case human has no valid moves)
+            valid_moves = st.session_state.game.get_valid_moves()
+            human_first = st.session_state.player_color == "Black (First)"
+            if valid_moves and (
+                (human_first and st.session_state.game.current_player == -1) or
+                (not human_first and st.session_state.game.current_player == 1)
+            ):
+                make_ai_move()
+
+
 
 # Controls container
 with st.container():
@@ -266,24 +285,18 @@ with st.container():
     
     with col2:
         # Reset button
+        # Update the reset button handling
         if st.button("Reset Game", key="reset_button"):
             st.session_state.game = OthelloGame()
             st.session_state.last_move = None
             st.session_state.ai_last_move = None
             st.session_state.move_made = False
             
-            # If AI goes first
-            if player_color == "White (Second)":
-                valid_moves = st.session_state.game.get_valid_moves()
-                if valid_moves:
-                    action = st.session_state.ai.ai.get_action(
-                        st.session_state.game.get_state(),
-                        valid_moves,
-                        training=False
-                    )
-                    if action:
-                        st.session_state.game.make_move(*action)
-                        st.session_state.ai_last_move = action
+            # If AI goes first (human chose White)
+            if st.session_state.player_color == "White (Second)":
+                make_ai_move()
+
+        
 
 # Game board container
 with st.container():
